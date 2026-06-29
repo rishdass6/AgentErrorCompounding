@@ -285,7 +285,7 @@ def largest_smallest_integers(lst):
 -------------------------------------------------------------------------------
 **For the input, provide the model with this prompt:**
 
-Do not use any tools. 
+Do not use any tools. House prices from 2006-2010
 Analyze the given columns and row and predict the house price of that row.
 Your answer should ONLY be the floating point number prediction
 
@@ -296,8 +296,11 @@ Order,PID,MS SubClass,MS Zoning,Lot Frontage,Lot Area,Street,Alley,Lot Shape,Lan
 
 **For two-shot:**
 Attach these two examples for each prompt:
+
+Example 1:
 1325,0902406090,050,RM,81,12150,Pave,Grvl,Reg,Lvl,AllPub,Inside,Gtl,OldTown,Norm,Norm,1Fam,1.5Fin,5,5,1954,1954,Gable,CompShg,MetalSd,MetalSd,BrkFace,335,TA,TA,BrkTil,TA,TA,No,Unf,0,Unf,0,1050,1050,GasA,Ex,N,FuseF,1050,745,0,1795,0,0,2,0,4,1,TA,7,Typ,0,NA,Attchd,1954,Unf,1,352,Fa,TA,Y,0,0,0,0,0,0,NA,NA,NA,0,11,2008,WD ,Normal,131500
 
+Example 2:
 1493,0908128050,085,RL,90,10012,Pave,NA,Reg,Lvl,AllPub,Inside,Gtl,Edwards,Norm,Norm,1Fam,SFoyer,4,5,1972,1972,Gable,CompShg,Plywood,Plywood,None,0,TA,TA,CBlock,Gd,TA,Av,BLQ,920,Rec,180,38,1138,GasA,TA,Y,SBrkr,1181,0,0,1181,1,0,2,0,3,1,TA,6,Typ,0,NA,Detchd,1974,RFn,2,588,TA,TA,Y,0,0,180,0,0,0,NA,MnPrv,NA,0,4,2008,WD ,Normal,137500
 
 ### Ames Housing Dataset
