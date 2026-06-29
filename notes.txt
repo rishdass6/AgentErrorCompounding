@@ -1,0 +1,4 @@
+Change the data completion dataset 
+It seems like the AI's have been trained on the FRED dataset. 
+
+Maybe use a price prediction dataset
