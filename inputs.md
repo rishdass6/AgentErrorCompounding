@@ -3,6 +3,9 @@ This section covers the exact outputs fed into the models during the baseline
 procedure section. It covers zero-shot and two-shot respectively, and exactly
 what data is fed into the model as well.
 
+**Text Vectorization model:** text-embedding-3-large-model
+**Code Vectorization model:** unixcoder-base
+
 ## zero-shot & two-shot
 Covers the zero-shot inputs of the model, as well as data.
 The data is chosen randomly. The two-shot variant is provided for each one.
