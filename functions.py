@@ -8,12 +8,13 @@ import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel
 import code_bert_score
 
-def text_vectorize_score(prediction: str, g_truth: str):
-    # Cosine Similarity
-    model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
+#model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
 
-    pred_vector = model.encode(prediction)
-    truth_vector = model.encode(g_truth)
+def text_vectorize_score(prediction: str, g_truth: str, embed_model, bert_scorer):
+    # Cosine Similarity
+
+    pred_vector = embed_model.encode(prediction)
+    truth_vector = embed_model.encode(g_truth)
 
     dot_product = np.dot(pred_vector, truth_vector)
     norm_pred = np.linalg.norm(pred_vector)
@@ -26,7 +27,7 @@ def text_vectorize_score(prediction: str, g_truth: str):
     pred_input = [prediction]
     truth_input = [g_truth]
 
-    P, R, F1 = score(pred_input, truth_input, lang="en", verbose = False, model_type="distilbert-base-uncased")
+    P, R, F1 = bert_scorer.score(pred_input, truth_input)
 
     P = P.item()
     R = R.item()
