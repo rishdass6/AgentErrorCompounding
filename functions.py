@@ -75,14 +75,12 @@ def code_vectorize_score(prediction: str, g_truth: str, tokenizer, model, bert_m
     similarity = similarity.item()
 
     #BERTScore for Code
-    pred_input = [prediction]
-    truth_input = [g_truth]
+    pred_input = [prediction if prediction.strip() else " "]
+    truth_input = [g_truth if g_truth.strip() else " "]
 
-    P, R, F1, F3 = bert_model.score(
+    P, R, F1 = bert_model.score(
         cands = pred_input,
-        refs = truth_input,
-        model_type = "microsoft/unixcoder-base",
-        lang = "python"
+        refs = truth_input
     )
 
     P1 = P.item()

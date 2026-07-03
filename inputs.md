@@ -68,7 +68,7 @@ Shawn told him to go away.
 **For the input, provide the model with this prompt:**
 
 Analyze the function signature and docstring, and provide a finished function. 
-Your response should ONLY be the full completed function (including the signature and docstring).
+Your response should ONLY be the full completed function (not including the signature and docstring).
 
 **and then attach the data as follows**
 
