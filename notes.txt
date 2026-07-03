@@ -1,4 +1,1 @@
-Change the data completion dataset 
-It seems like the AI's have been trained on the FRED dataset. 
-
-Maybe use a price prediction dataset - Like housing prices
+Do 30 iterations of baseline to create a distribution

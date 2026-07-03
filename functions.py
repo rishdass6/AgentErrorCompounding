@@ -43,7 +43,7 @@ def text_vectorize_score(prediction: str, g_truth: str, embed_model, bert_scorer
 tokenizer = AutoTokenizer.from_pretrained("microsoft/unixcoder-base")
 model = AutoModel.from_pretrained("microsoft/unixcoder-base")
 
-def code_vectorize_score(prediction: str, g_truth: str):
+def code_vectorize_score(prediction: str, g_truth: str, tokenizer, model, bert_model):
 
     #Cosine Similarity for Code
     def get_code_embedding(code_snippet):
@@ -78,7 +78,7 @@ def code_vectorize_score(prediction: str, g_truth: str):
     pred_input = [prediction]
     truth_input = [g_truth]
 
-    P, R, F1, F3 = code_bert_score.score(
+    P, R, F1, F3 = bert_model.score(
         cands = pred_input,
         refs = truth_input,
         model_type = "microsoft/unixcoder-base",
