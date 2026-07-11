@@ -5,6 +5,7 @@ from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModel
 from bert_score import BERTScorer
+import difflib
 
 model_text = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
 bert_scorer = BERTScorer(lang="en", model_type="distilbert-base-uncased")
@@ -27,10 +28,10 @@ You operate strictly within a sequential multi-turn "Review-then-Generate" loop 
 
 ### Multi-Step & Exit Strategy:
 - **If you have more than 1 remaining step left**, you must output your progress normally as an ongoing improved draft. Do NOT include the phrase "Final Answer:" under any circumstances. You are forbidden from ending early.
-- **Only when your remaining steps count is exactly 0**, you must prepend your final, optimized conclusion exactly like this:
+IMPORTANT: - **Only when your remaining steps count is exactly 0**, you must prepend your final, optimized conclusion exactly like this:
 Final Answer: [Your complete, finalized output]
 
-No Need for you to generate the remaining steps, they will be attached
+IMPORTANt: DO NOT GENERATE YOUR OWN REMAINING STEPS, THEY WILL ALWAYS BE ATTACHED BY THE SYSTEM.
 
 ### Strict Output Format:
 You must format your output exactly as shown below, preserving the headers:
@@ -41,6 +42,8 @@ Review:
 3. [Task 3 description]
 
 Generate:
+[Space to do additon things that isnt in the answer]
+Answer:
 [Your implemented output based strictly on the 3 tasks above]
 
 ### Example Multi-Turn Interaction:
@@ -52,6 +55,10 @@ Review:
 3. Check that the tone remains respectful and polite throughout.
 
 Generate:
+
+This is the area for doing addition things like checking. 
+
+Answer:
 Subject: Job Offer - Alex Miller
 
 Dear Taylor Smith,
@@ -71,6 +78,9 @@ Review:
 3. Proofread the entire message text to ensure optimal flow and executive polish.
 
 Generate:
+
+Space to do your addition things like checking, etc.
+
 Final Answer:
 Subject: Job Offer - Alex Miller
 
@@ -85,6 +95,17 @@ I was highly impressed by your team and hope our paths cross again in the future
 Sincerely,
 Alex Miller
 """
+
+GENERATE_GENERATE_SYS_PROMPT = """
+
+"""
+
+LLM_JUDGE_SYS_PROMOT = """
+
+"""
+
+def get_diff_ratio(text_a, text_b):
+    return difflib.SequenceMatcher(None, text_a, text_b).ratio()
 
 
 #Message types for the different models
@@ -182,14 +203,28 @@ def run_agent(client, message, ai_type, turns, dataset, ground_truth):
     F1_scores = []
     MSE_scores = []
 
+    previous_output = None
+    diff_scores = []
+
+    length_scores = []
+
     while(True):
         print(f"\n --- REVIEW + GENERATE AI {turns - remaining_turns + 1} --- ")
         remaining_turns -= 1
         response = ai_outputs(client, full_message, ai_type, system_prompt=REVIEW_GENERATE_SYS_PROMPT)
 
-        _, _, generate_output = response.partition("Generate:")
+        _, _, generate_output = response.partition("Generate:") 
         if "Final Answer:" in generate_output:
             _, _, generate_output = generate_output.partition("Final Answer:")
+        elif "Answer:" in generate_output:
+            _, _, generate_output = generate_output.partition("Answer:")
+
+        length_scores.append(len(generate_output.split()))
+
+        if previous_output is not None:
+            diff_scores.append(get_diff_ratio(previous_output, generate_output))
+        previous_output = generate_output
+
 
         if dataset == "ROCStories":
             result = text_vectorize_score(generate_output, ground_truth, model_text, bert_scorer)
@@ -214,7 +249,9 @@ def run_agent(client, message, ai_type, turns, dataset, ground_truth):
                  "final_answer": final_output,
                  "cosine_scores": cosine_scores,
                  "F1_scores": F1_scores,
-                 "MSE_scores": MSE_scores
+                 "MSE_scores": MSE_scores,
+                 "diff_scores": diff_scores,
+                 "length_scores": length_scores
              }
 
         if ai_type == "claude" or ai_type == "chatgpt" or ai_type == "glm":
@@ -240,29 +277,40 @@ api_key = os.getenv("ANTHROPIC_API_KEY")
 client = anthropic.Anthropic(api_key=api_key)
 
 user_message = """
-Write a 2-paragraph expository essay (150–200 words) on the topic: The role of schools in implementing dietary and educational interventions to combat childhood obesity. 
-Use a formal, academic tone with clear, concise sentences. 
-Begin by introducing the issue and explaining its importance using objective facts or context. 
-In the second paragraph, discuss practical solutions or recommendations and conclude with a strong closing statement. 
-Keep the writing logical, informative, and free of personal opinions or storytelling.
+Analyze the function signature and docstring, and provide a finished function. 
+IMPORTANT and FOLLOW CLOSELY: 
+Your response should ONLY be the full completed function (not including the signature and docstring).
+Make sure at each generate: does not include any normal text, just the copy and pasteable code. 
+
+def encode(message):
+    "
+    Write a function that takes a message, and encodes in such a 
+    way that it swaps case of all letters, replaces all vowels in 
+    the message with the letter that appears 2 places ahead of that 
+    vowel in the english alphabet. 
+    Assume only letters. 
+    
+    Examples:
+    >>> encode('test')
+    'TGST'
+    >>> encode('This is a message')
+    'tHKS KS C MGSSCGG'
+    "
 """
 
 ground_truth = """
-Obesity rates in school-aged children continue growing and influencing their development. 
-In addition to personal concerns and social judgments, overweight and obese children are at risk for long-term health consequences, 
-including cardiovascular problems, metabolic changes, and additional comorbidities (Karp & Gessell, 2015). Today, 
-it is not enough to recognize and control this problem. It is high time for schools to think about the interventions 
-they choose to protect children and remove as many obesity-related factors as possible. Healthy food like salads and fish 
-should replace fast food, and fresh juices and water must be offered instead of soda or Coca-Cola. In addition to healthy eating, 
-physical activities and education are to be promoted. Many children remain unaware of how to protect their health and avoid obesity, 
-so the task of schools is to increase awareness and contribute to healthy lifestyles. Obesity is not a disease anymore but a social 
-burden.
+    vowels = "aeiouAEIOU"
+    vowels_replace = dict([(i, chr(ord(i) + 2)) for i in vowels])
+    message = message.swapcase()
+    return ''.join([vowels_replace[i] if i in vowels else i for i in message])
 """
 
-result = run_agent(client, user_message, "claude", 8, "ROCStories", ground_truth)
+result = run_agent(client, user_message, "claude", 4, "HumanEval", ground_truth)
 print(f"\n === Final Cosine and F1 Scores === ")
-print(f"Cosine Scores: {result["cosine_scores"]}\n")
-print(f"F1 Scores: {result["F1_scores"]}\n")
+print(f"Cosine Scores: {result["cosine_scores"]}")
+print(f"F1 Scores: {result["F1_scores"]}")
+print(f"Delta Scores: {result["diff_scores"]}")
+print(f"Lengths: {result["length_scores"]}")
 
 #  --- REVIEW + GENERATE AI 1 --- 
 # Review:
