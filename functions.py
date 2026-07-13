@@ -45,7 +45,17 @@ model = AutoModel.from_pretrained("microsoft/unixcoder-base")
 
 def code_vectorize_score(prediction: str, g_truth: str, tokenizer, model, bert_model):
 
-    #Cosine Similarity for Code
+    # Safe text truncation function using the tokenizer
+    def truncate_to_max_tokens(text, max_tokens=1020):
+        # Tokenize and decode back to text using max_length truncation
+        tokens = tokenizer(text, max_length=max_tokens, truncation=True, add_special_tokens=False)
+        return tokenizer.decode(tokens['input_ids'])
+
+    # Pre-truncate both strings so code_bert_score doesn't throw a positional error
+    prediction_truncated = truncate_to_max_tokens(prediction)
+    g_truth_truncated = truncate_to_max_tokens(g_truth)
+
+    # Cosine Similarity for Code
     def get_code_embedding(code_snippet):
         tokens = tokenizer(
             f"<encoder-only> {code_snippet}",
@@ -67,16 +77,17 @@ def code_vectorize_score(prediction: str, g_truth: str, tokenizer, model, bert_m
 
         return sum_embeddings / sum_mask
     
+    # Still use the original inputs or truncated inputs for embedding calculation 
+    # (embedding calculation already truncates to 512, so either works)
     vector_pred = get_code_embedding(prediction)
     vector_truth = get_code_embedding(g_truth)
 
     similarity = F.cosine_similarity(vector_truth, vector_pred)
-
     similarity = similarity.item()
 
-    #BERTScore for Code
-    pred_input = [prediction if prediction.strip() else " "]
-    truth_input = [g_truth if g_truth.strip() else " "]
+    # BERTScore for Code using the pre-truncated strings
+    pred_input = [prediction_truncated if prediction_truncated.strip() else " "]
+    truth_input = [g_truth_truncated if g_truth_truncated.strip() else " "]
 
     P, R, F1 = bert_model.score(
         cands = pred_input,
@@ -93,6 +104,7 @@ def code_vectorize_score(prediction: str, g_truth: str, tokenizer, model, bert_m
         "BERTScore_P": P1,
         "BERTScore_R": R1 
     }
+
 
 def data_completion_score(prediction: float, g_truth: float):
     #Simple MSE
