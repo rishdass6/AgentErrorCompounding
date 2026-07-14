@@ -29,7 +29,7 @@ FOLLOW THE SYSTEM PROMPT CLOSELY WITH ANY USER PROMPT.
 You operate strictly within a sequential multi-turn "Review-then-Generate" loop to solve complex tasks over multiple steps. 
 
 ### Execution Instructions:
-1. **Review Phase**: Analyze the previous conversation history and the remaining steps. Formulate exactly 3 distinct, actionable tasks required to continue progressing toward a perfect result.
+1. **Review Phase**: Analyze the previous conversation history and the remaining steps. Give your review of what needs to be done and Formulate exactly 3 distinct, actionable tasks required to continue progressing toward a perfect result.
 2. **Generate Phase**: Execute and implement the 3 tasks identified in the Review Phase. 
 
 ### Multi-Step Progress Rules:
@@ -384,276 +384,90 @@ client = anthropic.Anthropic(api_key=api_key)
 user_message = """
 NO COMMENTS, NO DOCSTRING
 
-# Damerau–Levenshtein Distance
+Maximum Flow
 
-Given two sequences `A` and `B`, return the minimum number of edit operations required to transform `A` into `B`.
+You are given a directed graph with n nodes numbered from 0 to n - 1. Each edge has a capacity, representing the maximum amount of flow that can pass through it.
 
-The allowed edit operations are:
+Implement a Dinic class that supports:
 
-* **Insert** an element.
-* **Delete** an element.
-* **Replace** (substitute) one element with another.
-* **Transpose** two adjacent elements.
+Dinic(int n) – Initializes a flow network with n nodes.
+add_edge(int u, int v, int capacity) – Adds a directed edge from u to v with the given capacity.
+calc(int source, int sink) – Returns the maximum possible flow from source to sink.
 
-Each operation has a cost of **1**.
+The graph may contain multiple edges between the same pair of nodes, and capacities are non-negative integers.
 
-A custom comparison function may be provided to determine whether two elements should be considered equal. If no comparison function is supplied, two elements are equal only if they are exactly equal.
+Example:
 
-## Restricted vs. Unrestricted Distance
-
-A boolean parameter `restricted` determines which variant of the Damerau–Levenshtein distance is computed.
-
-### Restricted Distance (`restricted = True`)
-
-A transposition is allowed **only when it swaps two adjacent elements once**. After an element has participated in a transposition, it cannot be involved in another transposition as part of the same optimal edit sequence.
-
-This variant is also known as the **Optimal String Alignment (OSA)** distance.
-
-### Unrestricted Distance (`restricted = False`)
-
-Adjacent transpositions are still allowed, but elements may participate in multiple edit operations if doing so produces a shorter edit sequence.
-
-For example:
-
-```text
-BA → AB → ACB
-```
-
-requires two operations, so the unrestricted distance between `"BA"` and `"ACB"` is **2**.
-
-## Function Signature
-
-```python
-def damerau_levenshtein(
-    sequenceA: Sequence[Any],
-    sequenceB: Sequence[Any],
-    test_func: Callable[[Any, Any], bool] | None = None,
-    restricted: bool = True,
-) -> int:
-```
-
-## Constraints
-
-* `0 <= len(sequenceA), len(sequenceB) <= 5000`
-* The sequences may contain arbitrary comparable objects.
-* `test_func(a, b)` returns `True` if the two elements should be considered equal.
-* If `test_func` is `None`, equality is determined using standard equality.
-* Expected time complexity: **O(m × n)**, where `m` and `n` are the lengths of the two sequences.
-* Expected space complexity: **O(m × n)**.
-
-## Examples
-
-### Example 1
-
-```text
 Input:
-sequenceA = "ca"
-sequenceB = "ac"
-restricted = True
+n = 4
+edges = [[0,1,3], [0,2,2], [1,2,1], [1,3,2], [2,3,4]]
+source = 0
+sink = 3
 
 Output:
-1
+5
 
-Explanation:
-Transpose the adjacent characters 'c' and 'a'.
-```
+Constraints:
 
-### Example 2
-
-```text
-Input:
-sequenceA = "kitten"
-sequenceB = "sitting"
-
-Output:
-3
-
-Explanation:
-One optimal sequence is:
-Replace 'k' with 's',
-replace 'e' with 'i',
-insert 'g'.
-```
-
-### Example 3
-
-```text
-Input:
-sequenceA = "BA"
-sequenceB = "ACB"
-restricted = False
-
-Output:
-2
-
-Explanation:
-One optimal sequence is:
-BA → AB (transpose)
-AB → ACB (insert 'C')
-```
-
-### Example 4
-
-```text
-Input:
-sequenceA = [1, 2, 3]
-sequenceB = [1, 3, 2]
-
-Output:
-1
-
-Explanation:
-Transpose the adjacent elements 2 and 3.
-```
-
-### Example 5
-
-```text
-Input:
-sequenceA = [1, 2, 3]
-sequenceB = [1, 2, 3]
-
-Output:
-0
-
-Explanation:
-The sequences are already identical.
-```
-
+2 <= n <= 500
+0 <= capacity <= 10^9
+Multiple edges and disconnected graphs are allowed.
 """
 
 ground_truth = """
-class DamerauLevenshtein(_Base):
 
-    def __init__(
-        self,
-        qval: int = 1,
-        test_func: TestFunc | None = None,
-        external: bool = True,
-        restricted: bool = True,
-    ) -> None:
-        self.qval = qval
-        self.test_func = test_func or self._ident
-        self.external = external
-        self.restricted = restricted
 
-    def _numpy(self, s1: Sequence[T], s2: Sequence[T]) -> int:
-        # TODO: doesn't pass tests, need improve
-        d = numpy.zeros([len(s1) + 1, len(s2) + 1], dtype=int)
+class Dinic:
+    def __init__(self, n):
+        self.lvl = [0] * n
+        self.ptr = [0] * n
+        self.q = [0] * n
+        self.adj = [[] for _ in range(n)]
 
-        # matrix
-        for i in range(-1, len(s1) + 1):
-            d[i][-1] = i + 1
-        for j in range(-1, len(s2) + 1):
-            d[-1][j] = j + 1
+    def add_edge(self, a, b, c, rcap=0):
+        self.adj[a].append([b, len(self.adj[b]), c, 0])
+        self.adj[b].append([a, len(self.adj[a]) - 1, rcap, 0])
 
-        for i, cs1 in enumerate(s1):
-            for j, cs2 in enumerate(s2):
-                cost = int(not self.test_func(cs1, cs2))
-                # ^ 0 if equal, 1 otherwise
+    def dfs(self, v, t, f):
+        if v == t or not f:
+            return f
 
-                d[i][j] = min(
-                    d[i - 1][j] + 1,            # deletion
-                    d[i][j - 1] + 1,            # insertion
-                    d[i - 1][j - 1] + cost,     # substitution
-                )
+        for i in range(self.ptr[v], len(self.adj[v])):
+            e = self.adj[v][i]
+            if self.lvl[e[0]] == self.lvl[v] + 1:
+                p = self.dfs(e[0], t, min(f, e[2] - e[3]))
+                if p:
+                    self.adj[v][i][3] += p
+                    self.adj[e[0]][e[1]][3] -= p
+                    return p
+            self.ptr[v] += 1
 
-                # transposition
-                if not i or not j:
-                    continue
-                if not self.test_func(cs1, s2[j - 1]):
-                    continue
-                d[i][j] = min(
-                    d[i][j],
-                    d[i - 2][j - 2] + cost,
-                )
+        return 0
 
-        return d[len(s1) - 1][len(s2) - 1]
+    def calc(self, s, t):
+        flow, self.q[0] = 0, s
+        for l in range(31):  # l = 30 maybe faster for random data
+            while True:
+                self.lvl, self.ptr = [0] * len(self.q), [0] * len(self.q)
+                qi, qe, self.lvl[s] = 0, 1, 1
+                while qi < qe and not self.lvl[t]:
+                    v = self.q[qi]
+                    qi += 1
+                    for e in self.adj[v]:
+                        if not self.lvl[e[0]] and (e[2] - e[3]) >> (30 - l):
+                            self.q[qe] = e[0]
+                            qe += 1
+                            self.lvl[e[0]] = self.lvl[v] + 1
 
-    def _pure_python_unrestricted(self, s1: Sequence[T], s2: Sequence[T]) -> int:
-        d: dict[tuple[int, int], int] = {}
-        da: dict[T, int] = {}
+                p = self.dfs(s, t, INF)
+                while p:
+                    flow += p
+                    p = self.dfs(s, t, INF)
 
-        len1 = len(s1)
-        len2 = len(s2)
+                if not self.lvl[t]:
+                    break
 
-        maxdist = len1 + len2
-        d[-1, -1] = maxdist
-
-        # matrix
-        for i in range(len(s1) + 1):
-            d[i, -1] = maxdist
-            d[i, 0] = i
-        for j in range(len(s2) + 1):
-            d[-1, j] = maxdist
-            d[0, j] = j
-
-        for i, cs1 in enumerate(s1, start=1):
-            db = 0
-            for j, cs2 in enumerate(s2, start=1):
-                i1 = da.get(cs2, 0)
-                j1 = db
-                if self.test_func(cs1, cs2):
-                    cost = 0
-                    db = j
-                else:
-                    cost = 1
-
-                d[i, j] = min(
-                    d[i - 1, j - 1] + cost,     # substitution
-                    d[i, j - 1] + 1,            # insertion
-                    d[i - 1, j] + 1,            # deletion
-                    d[i1 - 1, j1 - 1] + (i - i1) - 1 + (j - j1),  # transposition
-                )
-            da[cs1] = i
-
-        return d[len1, len2]
-
-    def _pure_python_restricted(self, s1: Sequence[T], s2: Sequence[T]) -> int:
-        d: dict[tuple[int, int], int] = {}
-
-        # matrix
-        for i in range(-1, len(s1) + 1):
-            d[i, -1] = i + 1
-        for j in range(-1, len(s2) + 1):
-            d[-1, j] = j + 1
-
-        for i, cs1 in enumerate(s1):
-            for j, cs2 in enumerate(s2):
-                cost = int(not self.test_func(cs1, cs2))
-                # ^ 0 if equal, 1 otherwise
-
-                d[i, j] = min(
-                    d[i - 1, j] + 1,            # deletion
-                    d[i, j - 1] + 1,            # insertion
-                    d[i - 1, j - 1] + cost,     # substitution
-                )
-
-                # transposition
-                if not i or not j:
-                    continue
-                if not self.test_func(cs1, s2[j - 1]):
-                    continue
-                if not self.test_func(s1[i - 1], cs2):
-                    continue
-                d[i, j] = min(
-                    d[i, j],
-                    d[i - 2, j - 2] + cost,
-                )
-
-        return d[len(s1) - 1, len(s2) - 1]
-
-    def __call__(self, s1: Sequence[T], s2: Sequence[T]) -> int:
-        s1, s2 = self._get_sequences(s1, s2)
-
-        result = self.quick_answer(s1, s2)
-        if result is not None:
-            return result  # type: ignore[return-value]
-
-        if self.restricted:
-            return self._pure_python_restricted(s1, s2)
-        return self._pure_python_unrestricted(s1, s2)
-
+        return flow
 """
 
 # =========================================================================================================================================
