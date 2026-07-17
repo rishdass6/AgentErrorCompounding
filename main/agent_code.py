@@ -1,5 +1,5 @@
 import os
-from google.genai import types
+from google.generativeai import types
 from functions import text_vectorize_score, code_vectorize_score, data_completion_score
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
@@ -382,97 +382,102 @@ client = anthropic.Anthropic(api_key=api_key)
 # =========================================================================================================================================
 
 user_message = """
-NO COMMENTS, NO DOCSTRING
+Problem
 
-Maximum Flow
+A robot moves on an infinite 2D grid.
 
-You are given a directed graph with n nodes numbered from 0 to n - 1. Each edge has a capacity, representing the maximum amount of flow that can pass through it.
+Initial position:
 
-Implement a Dinic class that supports:
+(0,0)
 
-Dinic(int n) – Initializes a flow network with n nodes.
-add_edge(int u, int v, int capacity) – Adds a directed edge from u to v with the given capacity.
-calc(int source, int sink) – Returns the maximum possible flow from source to sink.
+Initial direction:
 
-The graph may contain multiple edges between the same pair of nodes, and capacities are non-negative integers.
+East
 
-Example:
+Initial energy:
 
-Input:
-n = 4
-edges = [[0,1,3], [0,2,2], [1,2,1], [1,3,2], [2,3,4]]
-source = 0
-sink = 3
+17
 
-Output:
-5
+The robot executes the following instructions in order.
 
-Constraints:
+Primitive Instructions
+F : Move forward one cell.
+Costs 1 energy.
+If energy becomes negative after paying the cost, execution immediately stops.
+L : Rotate left.
+R : Rotate right.
+B : Move backward one cell (relative to current direction).
+Costs 2 energy.
+C : Charge +3 energy.
+Special Tiles
 
-2 <= n <= 500
-0 <= capacity <= 10^9
-Multiple edges and disconnected graphs are allowed.
+The following coordinates contain special tiles:
+
+Coordinate	Effect
+(2,1)	Teleport to (-1,3)
+(-2,3)	Rotate 180°
+(0,4)	Gain +5 energy
+(-3,2)	Lose 4 energy
+(1,-1)	Skip the next instruction
+(-1,1)	Repeat the previous instruction once
+
+Each tile activates only the first time it is visited.
+
+Instruction Sequence
+F
+F
+L
+F
+F
+R
+F
+F
+L
+B
+C
+F
+L
+F
+F
+R
+F
+F
+B
+L
+F
+R
+F
+Question
+
+Determine:
+
+Final position
+Final direction
+Final energy
+Number of instructions actually executed (including repeated instructions but excluding skipped ones)
+
+the (0, 0) is row by column.
+
+In each answer: or final answer:, make sure you give an clear answer
 """
 
 ground_truth = """
+Final Position:
+(4, 1)
 
+Final Direction:
+North
 
-class Dinic:
-    def __init__(self, n):
-        self.lvl = [0] * n
-        self.ptr = [0] * n
-        self.q = [0] * n
-        self.adj = [[] for _ in range(n)]
+Final Energy:
+3
 
-    def add_edge(self, a, b, c, rcap=0):
-        self.adj[a].append([b, len(self.adj[b]), c, 0])
-        self.adj[b].append([a, len(self.adj[a]) - 1, rcap, 0])
-
-    def dfs(self, v, t, f):
-        if v == t or not f:
-            return f
-
-        for i in range(self.ptr[v], len(self.adj[v])):
-            e = self.adj[v][i]
-            if self.lvl[e[0]] == self.lvl[v] + 1:
-                p = self.dfs(e[0], t, min(f, e[2] - e[3]))
-                if p:
-                    self.adj[v][i][3] += p
-                    self.adj[e[0]][e[1]][3] -= p
-                    return p
-            self.ptr[v] += 1
-
-        return 0
-
-    def calc(self, s, t):
-        flow, self.q[0] = 0, s
-        for l in range(31):  # l = 30 maybe faster for random data
-            while True:
-                self.lvl, self.ptr = [0] * len(self.q), [0] * len(self.q)
-                qi, qe, self.lvl[s] = 0, 1, 1
-                while qi < qe and not self.lvl[t]:
-                    v = self.q[qi]
-                    qi += 1
-                    for e in self.adj[v]:
-                        if not self.lvl[e[0]] and (e[2] - e[3]) >> (30 - l):
-                            self.q[qe] = e[0]
-                            qe += 1
-                            self.lvl[e[0]] = self.lvl[v] + 1
-
-                p = self.dfs(s, t, INF)
-                while p:
-                    flow += p
-                    p = self.dfs(s, t, INF)
-
-                if not self.lvl[t]:
-                    break
-
-        return flow
+Instructions Executed:
+24
 """
 
 # =========================================================================================================================================
 
-result = run_agent(client, user_message, "claude", 4, "HumanEval", ground_truth)
+result = run_agent(client, user_message, "claude", 7, "ROCStories", ground_truth)
 print(f"\n === Final Cosine and F1 Scores === ")
 print(f"Cosine Scores: {result["cosine_scores"]}")
 print(f"F1 Scores: {result["F1_scores"]}")

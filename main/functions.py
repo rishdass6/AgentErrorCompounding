@@ -110,3 +110,75 @@ def data_completion_score(prediction: float, g_truth: float):
     #Simple MSE
 
     return (g_truth - prediction) ** 2
+
+#Message types for the different models
+# claude/chatgpt/GLM5.2:
+# "messages": [
+#   {
+#     "role": "user",
+#     "content": "Hello, world!"
+#   }
+# ]
+
+# gemini:
+# "contents": [
+#   {
+#     "role": "user",
+#     "parts": [
+#       {
+#         "text": "Hello, world!"
+#       }
+#     ]
+#   }
+# ]
+def ai_outputs(client, message, ai_type, system_prompt=None):
+    match ai_type:
+        case "claude":
+            response = client.messages.create(
+                model="claude-opus-4-8",
+                max_tokens=1800,
+                system=system_prompt,
+                output_config={
+                    "effort":"low"
+                },
+                messages=message
+            ) 
+            return response.content[0].text   
+                
+        case "chatgpt":
+            full_messages = [{"role": "system", "content": system_prompt}] + message if system_prompt else message
+            response = client.chat.completions.create(
+                model="gpt-5.5",
+                max_completion_tokens=8192,
+                reasoning_effort="low",
+                messages=full_messages
+            )
+
+            #print(response.choices[0].message.content)
+            return response.choices[0].message.content
+        
+        case "gemini":
+            user_contents = [msg for msg in message if msg.get("role") != "system"]
+            response = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=user_contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=500,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_level="LOW"
+                    )
+                )
+            )
+            return response.text
+
+        case "glm":
+            full_messages = [{"role": "system", "content": system_prompt}] + message if system_prompt else message
+            response = client.chat.completions.create(
+                model="glm-5.2",
+                max_tokens=500,
+                reasoning_effort="low",
+                messages=full_messages
+            )
+
+            return response.choices[0].message.content

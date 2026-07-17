@@ -1,8 +1,11 @@
 # Use Datasets: Algorithmns Open Source Project, MATH, HotpotQA (Maybe different reasoning dataset)
 # 
 
+# Use SciCode for Datasets
+
+
 ## For Code use: https://github.com/cheran-senthil/PyRival/
-## For Text Reasoning Use: MuSR Dataset
+## For Text Reasoning Use: MuSR Dataset / MIR - Bench - USE RULE-BASED SIMULATIONS
 ## For Math/Value use: HARDMath Dataset 
 
 
