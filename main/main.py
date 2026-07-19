@@ -8,6 +8,7 @@ import anthropic
 from dotenv import load_dotenv
 from enum import Enum
 from bert_score import BERTScorer as TextBERT
+from google import genai
 
 load_dotenv(override=True)
 
@@ -16,8 +17,8 @@ bert_scorer = TextBERT(lang="en", model_type="distilbert-base-uncased")
 
 print(f"All Models and Nessarcy imports loaded... \n")
 
-COSINE_THRESHOLD = 0.82
-MAX_REVIEW_B_RETRIES = 4
+COSINE_THRESHOLD = 0.76
+MAX_REVIEW_B_RETRIES = 2
 
 def build_pivot_prompt(review_a_text, failed_attempts):
     attempts_block = "\n\n".join(
@@ -36,6 +37,10 @@ Your prior Review B attempt(s) are below. Each one was found to collide
 (too similar) with Review A or with each other:
 
 {attempts_block}
+
+Limit your response to approximately 250 words. Do not re-trace examples or re-verify claims you 
+confirmed in a previous cycle — reference the prior conclusion by name and move on. 
+State only what is new or changed this cycle
 
 You must now reason about a COMPLETELY DIFFERENT engineering taxonomy that
 none of the above have meaningfully covered. Choose ONE of the following,
@@ -110,6 +115,10 @@ def run_review_b_with_retries(client, full_message, ai_type, review_a_text, cycl
 REVIEW_A_SYS_PROMPT = """
 You are an Architecture Reviewer examining a single piece of code.
 
+Limit your response to approximately 250 words. Do not re-trace examples or re-verify claims you 
+confirmed in a previous cycle — reference the prior conclusion by name and move on. 
+State only what is new or changed this cycle
+
 Your ONLY lens: macro structure. You may discuss:
 - module/function boundaries and responsibility splits
 - data flow and state management design
@@ -136,6 +145,10 @@ Review A:
 REVIEW_B_SYS_PROMPT = """
 You are a QA Engineer examining a single piece of code. You have not
 seen any other review of this code.
+
+Limit your response to approximately 250 words. Do not re-trace examples or re-verify claims you 
+confirmed in a previous cycle — reference the prior conclusion by name and move on. 
+State only what is new or changed this cycle
 
 Your ONLY lens: micro execution correctness. You may discuss:
 - specific bugs, off-by-one errors, incorrect conditionals
@@ -315,13 +328,23 @@ def run_vector_collision_agent(client, message, ai_type, num_cycles):
 
         phase_idx = (phase_idx + 1) % len(ORDER)
 
-api_key = os.getenv("ANTHROPIC_API_KEY")
-client = anthropic.Anthropic(api_key=api_key)
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+anthropic_client = anthropic.Anthropic(api_key=anthropic_api_key)
+
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+gemini_client = genai.Client(api_key=gemini_api_key)
+
 
 user_message = """
-Hi my name is Rish, What should I do today?
+Problem: Earliest Complete Collection
+
+You are given an integer array items, where each value represents the type of an item collected in order, and an integer m representing the number of distinct item types labeled from 1 to m. Return the smallest index at which every item type has appeared at least once. If it is impossible because some type never appears, return -1.
+
+Input: An integer array items (1 <= items.length <= 2 * 10^5) and an integer m (1 <= m <= 2 * 10^5). Every value in items satisfies 1 <= items[i] <= m.
+
+Output: Return the earliest zero-based index where all m item types have been collected, or -1 if no such index exists. Aim for an O(n) time solution with O(m) additional space.
 """
 
-result = run_normal_agent(client, user_message, "claude", 3)
+result = run_vector_collision_agent(gemini_client, user_message, "gemini", 6)
 print(result["final_answer"])
 

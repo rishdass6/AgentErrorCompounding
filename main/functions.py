@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel
 import code_bert_score
+from google.genai import types
 
 #model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5", trust_remote_code=True)
 
@@ -164,7 +165,7 @@ def ai_outputs(client, message, ai_type, system_prompt=None):
                 contents=user_contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    max_output_tokens=500,
+                    max_output_tokens=2400,
                     thinking_config=types.ThinkingConfig(
                         thinking_level="LOW"
                     )
